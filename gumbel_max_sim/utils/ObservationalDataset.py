@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 cols = [
     "hr_state",
     "sysbp_state",
-    "percoxyg_state",
+    "diabetic_idx",
     "glucose_state",
     "antibiotic_state",
     "vaso_state",
