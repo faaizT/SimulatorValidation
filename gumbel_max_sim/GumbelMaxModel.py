@@ -21,7 +21,9 @@ from gumbel_max_sim.utils.Networks import Combiner, Combiner_without_rnn, Net
 class GumbelMaxModel(nn.Module):
     def __init__(
         self,
-        simulator_name,
+        vaso_sim_name,
+        vent_sim_name,
+        antib_sim_name,
         use_cuda=False,
         st_vec_dim=8,
         n_act=8,
@@ -29,7 +31,6 @@ class GumbelMaxModel(nn.Module):
         super().__init__()
         self.use_cuda = use_cuda
         self.device = torch.device("cuda" if use_cuda else "cpu")
-        self.simulator_name = simulator_name
         self.s0_diab_logits = nn.Parameter(torch.zeros(2))
         self.s0_diab_logits.to(self.device)
         self.s0_hr = nn.Parameter(torch.zeros((2, 3)))
@@ -37,6 +38,7 @@ class GumbelMaxModel(nn.Module):
         self.s0_glucose = nn.Parameter(torch.zeros((2, 5)))
         self.s0_percoxyg = nn.Parameter(torch.zeros((2, 2)))
         self.policy = nn.Parameter(torch.zeros((2,3,3,2,5,2,2,2,8)))
+        self.simulator = get_combined_simulator(vaso_sim_name, vent_sim_name, antib_sim_name, self.device)
 
         if use_cuda:
             self.cuda()
@@ -76,7 +78,7 @@ class GumbelMaxModel(nn.Module):
             ).to(torch.long)
             a_prev = Action(action_idx=torch.zeros(len(mini_batch)))
             state = State(hr_state=s0_hr, sysbp_state=s0_sysbp, percoxyg_state=s0_percoxyg, glucose_state=s0_glucose, antibiotic_state=a_prev.antibiotic, vaso_state=a_prev.vasopressors, vent_state=a_prev.ventilation, diabetic_idx=s0_diab)
-            mdp = get_simulator(name=self.simulator_name, init_state=state, device=self.device)
+            mdp = self.simulator(init_state=state, device=self.device)
             for t in pyro.markov(range(T_max-1)):
                 at = pyro.sample(
                     f"a{t}",

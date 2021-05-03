@@ -73,9 +73,9 @@ def log_initial_state(model, epoch, device="cpu"):
                'percoxyg_diab_table': percoxyg_diab_table})
 
 
-def write_to_file(file_name, simulator_name, loss):
+def write_to_file(file_name, vaso_sim, vent_sim, antib_sim, loss):
     with open(file_name, 'a', 1) as f:
-        f.write(simulator_name + ',' + str(loss) + os.linesep)
+        f.write(vaso_sim + ',' + vent_sim + ',' + antib_sim + ',' + str(loss) + os.linesep)
 
 
 def delete_redundant_states(dir):
@@ -141,7 +141,10 @@ def evaluate(svi, test_loader, use_cuda=False):
 def main(args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-    gumbel_model = GumbelMaxModel(simulator_name=args.simulator, use_cuda=use_cuda)
+    gumbel_model = GumbelMaxModel(vaso_sim_name=args.vaso_sim,
+                                  vent_sim_name=args.vent_sim,
+                                  antib_sim_name=args.antib_sim,
+                                  use_cuda=use_cuda)
     gumbel_model.to(device)
     exportdir = args.exportdir
     log_file_name = f"{exportdir}/gumbel_max_model.log"
@@ -150,7 +153,7 @@ def main(args):
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.FileHandler(log_file_name), logging.StreamHandler()],
     )
-    logging.info(f'Using simulator {args.simulator}')
+    logging.info(f'Using simulators: vaso: {args.vaso_sim}, vent: {args.vent_sim}, abx: {args.antib_sim}')
     observational_dataset = ObservationalDataset(
         args.path, xt_columns=cols, action_columns=["A_t"]
     )
@@ -238,7 +241,7 @@ def main(args):
     logging.info("Chosen epoch error: %.4f" % epoch_loss_test)
     save_states(gumbel_model, exportdir, save_final=True)
     log_initial_state(gumbel_model, epoch, device)
-    write_to_file(args.output_file, args.simulator, epoch_loss_test)
+    write_to_file(args.output_file, args.vaso_sim, args.vent_sim, args.antib_sim, epoch_loss_test)
     if args.delete_states:
         delete_redundant_states(exportdir)
 
@@ -251,7 +254,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("exportdir", help="path to output directory")
     parser.add_argument("--output_file", help="Output file to contain final test loss results", required=True)
-    parser.add_argument("--simulator", help="name of simulator to run", type=str, default='real')
+    parser.add_argument("--vaso_sim", help="name of vaso simulator to run", type=str, default='real')
+    parser.add_argument("--vent_sim", help="name of vent simulator to run", type=str, default='real')
+    parser.add_argument("--antib_sim", help="name of antib simulator to run", type=str, default='real')
     parser.add_argument("--run_name", help="wandb run name", type=str, required=True)
     parser.add_argument("--lr", help="learning rate", type=float, default=0.001)
     parser.add_argument(
@@ -273,7 +278,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if not os.path.exists(args.output_file):
         with open(args.output_file, "w") as f:
-            f.write('simulator name,test loss' + os.linesep)
+            f.write('simulator vaso,simulator vent,simulator abx,test loss' + os.linesep)
 
     wandb.init(project="SimulatorValidation", name=args.run_name)
     wandb.config.lr = args.lr
