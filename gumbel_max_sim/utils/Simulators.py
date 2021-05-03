@@ -415,7 +415,7 @@ class MDPAnitibioticIntensity_minus2():
     def __init__(self, device):
         self.device = device
 
-    def transition_antibiotics_on(self):
+    def transition_antibiotics_on(self, state):
         batch_size = state.vent_state.size(0)
         """
         antibiotics state on
@@ -496,7 +496,7 @@ class MDPVasoReal():
         glucose_probs = torch.stack((torch.stack([glucose_probs_no_diab]*batch_size), torch.stack([glucose_probs_diab]*batch_size)))
         return sysbp_probs.to(self.device), glucose_probs.to(self.device)
 
-    def transition_vaso_off(self):
+    def transition_vaso_off(self, state):
         batch_size = state.vent_state.size(0)
         '''
         vasopressor state off
